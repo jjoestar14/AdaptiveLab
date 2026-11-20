@@ -49,8 +49,6 @@ AdaptiveLab adalah aplikasi web interaktif yang dikembangkan dari awal (*from sc
 
 ## 2. Struktur Proyek
 
-Struktur repositori yang terlacak pada Git (sesuai aturan `.gitignore`):
-
 ```text
 AdaptiveLab/
 ├── app.py                      # Server Flask, routing API JSON, & auto-discovery dataset
