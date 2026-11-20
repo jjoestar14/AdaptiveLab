@@ -73,14 +73,28 @@ AdaptiveLab/
 │       ├── viewer.js           # Slider interaktif Before/After
 │       ├── charts.js           # Visualisasi kurva histogram Chart.js
 │       └── main.js             # State management, debounce, navigasi tab, modal
-├── sample_images/              # Dataset naskah kuno H-DIBCO 2016 & Ground Truth
-│   ├── 1.bmp ... 10.bmp        # Citra dokumen tulisan tangan H-DIBCO 2016
-│   └── 1_gt.bmp ... 10_gt.bmp  # Citra acuan Ground Truth biner resmi
+├── sample_images/              # Dataset citra masukan & Ground Truth biner
+│   ├── 1.bmp ... 10.bmp        # Citra dokumen naskah kuno H-DIBCO 2016
+│   ├── 1_gt.bmp ... 10_gt.bmp  # Ground Truth biner resmi H-DIBCO 2016
+│   ├── sample1_uneven_light.png    # Sampel sintetis: pencahayaan tidak merata
+│   ├── sample1_uneven_light_gt.png # Ground Truth biner sampel 1
+│   ├── sample2_salt_pepper.png     # Sampel sintetis: noise salt-and-pepper
+│   ├── sample2_salt_pepper_gt.png  # Ground Truth biner sampel 2
+│   ├── sample3_low_contrast.png    # Sampel sintetis: kontras rendah
+│   └── sample3_low_contrast_gt.png # Ground Truth biner sampel 3
+├── scripts/
+│   └── make_samples.py         # Skrip pembuatan dataset sintetis terdegradasi
 └── tests/                      # Rangkaian pengujian otomatis Pytest
     ├── test_threshold.py       # Validasi parameter & uji identik manual vs opencv (< 1%)
     ├── test_modules.py         # Pengujian preprocess, postprocess, metrics, compare
     └── test_api.py             # Pengujian endpoint REST API Flask
 ```
+
+> **Catatan Berkas yang Diabaikan (*Ignored by `.gitignore`*):**
+> - `report_assets/` (direktori aset visual laporan bab 4)
+> - `scripts/generate_report_assets.py` (skrip pembuat aset laporan bab 4)
+> - `outputs/` (direktori penyimpanan sementara server untuk unggahan dan ekspor)
+> - `.venv/`, `__pycache__/`, `.pytest_cache/` (lingkungan virtual dan cache Python)
 
 ---
 
