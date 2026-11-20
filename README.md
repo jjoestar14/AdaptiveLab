@@ -49,10 +49,13 @@ AdaptiveLab adalah aplikasi web interaktif yang dikembangkan dari awal (*from sc
 
 ## 2. Struktur Proyek
 
+Struktur repositori yang terlacak pada Git (sesuai aturan `.gitignore`):
+
 ```text
 AdaptiveLab/
-├── app.py                      # Aplikasi Flask & routing API JSON
-├── requirements.txt            # Dependensi paket Python
+├── .gitignore                  # Konfigurasi pengabaian berkas & folder Git
+├── app.py                      # Server Flask, routing API JSON, & auto-discovery dataset
+├── requirements.txt            # Dependensi pustaka Python
 ├── README.md                   # Dokumentasi teknis & panduan riset
 ├── core/                       # Modul inti pengolahan citra & Computer Vision
 │   ├── __init__.py
@@ -73,28 +76,21 @@ AdaptiveLab/
 │       ├── viewer.js           # Slider interaktif Before/After
 │       ├── charts.js           # Visualisasi kurva histogram Chart.js
 │       └── main.js             # State management, debounce, navigasi tab, modal
-├── sample_images/              # Citra uji sintetis & Ground Truth biner
-│   ├── sample1_uneven_light.png
-│   ├── sample1_uneven_light_gt.png
-│   ├── sample2_salt_pepper.png
-│   ├── sample2_salt_pepper_gt.png
-│   ├── sample3_low_contrast.png
-│   └── sample3_low_contrast_gt.png
-├── scripts/
-│   ├── make_samples.py         # Skrip pembuatan dataset sintetis terdegradasi
-│   └── generate_report_assets.py # Skrip pembangkit aset gambar & tabel untuk Bab 4 laporan
-├── report_assets/              # Aset siap pakai untuk Bab 4 laporan kuliah
-│   ├── 01_original.png ... 08_confusion_diff_map.png
-│   ├── compare_montage_2x2.png
-│   ├── tabel_eksperimen_blocksize_vs_c.csv
-│   ├── histogram_intensitas.png
-│   └── grafik_f1_vs_blocksize.png
-├── outputs/                    # Direktori penyimpanan sementara server
+├── sample_images/              # Dataset naskah kuno H-DIBCO 2016 & Ground Truth
+│   ├── 1.bmp ... 10.bmp        # Citra dokumen tulisan tangan H-DIBCO 2016
+│   └── 1_gt.bmp ... 10_gt.bmp  # Citra acuan Ground Truth biner resmi
 └── tests/                      # Rangkaian pengujian otomatis Pytest
     ├── test_threshold.py       # Validasi parameter & uji identik manual vs opencv (< 1%)
     ├── test_modules.py         # Pengujian preprocess, postprocess, metrics, compare
     └── test_api.py             # Pengujian endpoint REST API Flask
 ```
+
+> **Catatan Berkas yang Diabaikan (*Ignored by `.gitignore`*):**
+> - `report_assets/` (direktori aset visual laporan bab 4)
+> - `scripts/` (`make_samples.py` & `generate_report_assets.py`)
+> - `sample_images/sample*.png` (sampel sintetis bawaan diabaikan, digantikan oleh H-DIBCO 2016)
+> - `outputs/` (direktori penyimpanan sementara server untuk unggahan dan ekspor)
+> - `.venv/`, `__pycache__/`, `.pytest_cache/` (lingkungan virtual dan cache Python)
 
 ---
 
@@ -155,26 +151,14 @@ Dataset H-DIBCO 2016 terdiri dari dokumen naskah tulisan tangan kuno bersejarah 
 3. **Pencahayaan & Bayangan Tidak Merata:** Variasi iluminasi akibat kelengkungan jilidan naskah atau kondisi pemindaian/fotografi arsip.
 4. **Intensitas Tinta Pudar (*Faded Ink*):** Goresan pena tipis yang mengalami penurunan kontras terhadap latar kertas.
 
-### B. Langkah Menambahkan Dataset H-DIBCO 2016 ke AdaptiveLab
-Untuk memasukkan citra dokumen H-DIBCO 2016 dan Ground Truth-nya:
-1. Unduh berkas citra uji (*test images*) dan *Ground Truth* dari [https://vc.ee.duth.gr/h-dibco2016/](https://vc.ee.duth.gr/h-dibco2016/).
-2. Salin berkas citra dokumen dan Ground Truth ke dalam folder:
-   ```text
-   d:\Antigravity Project\AdaptiveLab\sample_images\
-   ```
-3. Gunakan konvensi penamaan akhiran `_gt` untuk berkas Ground Truth agar sistem **otomatis mendeteksi dan memasangkannya**:
-   - Citra Asli: `hdibco2016_01.png` (atau format `.bmp`, `.jpg`)
-   - Citra Ground Truth: `hdibco2016_01_gt.png` (atau format `.bmp`)
-4. Jalankan atau muat ulang aplikasi (`py app.py`). Berkas akan langsung terdaftar di menu pilihan sampel di web UI beserta indikator status `Ground Truth: Tersedia ✓`.
-
-### C. Rekomendasi Parameter Pengujian untuk Dokumen H-DIBCO 2016
+### B. Rekomendasi Parameter Pengujian untuk Dokumen H-DIBCO 2016
 Berdasarkan karakteristik naskah tulisan tangan H-DIBCO 2016:
 - **Block Size ($N$):** Gunakan $N = 25$ hingga $35$ (ganjil). Rentang ini ideal untuk melingkupi lebar goresan pena tulisan tangan serta spasi antar-kata.
 - **Konstanta $C$:** Disarankan menaikkan nilai $C$ ke rentang **$8$ hingga $15$** (default: 5). Nilai $C$ yang lebih tinggi efektif menekan noise *bleed-through* (tinta tembus) dan noda kertas agar tidak salah terklasifikasi sebagai teks.
 - **Pra-pemrosesan:** Aktifkan **Gaussian Blur** ($3 \times 3$, $\sigma = 0.8$) atau **Median Blur** ($3 \times 3$) untuk menghaluskan tekstur serat kertas kuno sebelum binerisasi.
 - **Pasca-pemrosesan:** Aktifkan **Hapus Komponen Kecil** (*min area* $8 - 15$ px) untuk membersihkan bintik-bintik tinta tembus terisolasi.
 
-### D. Format Evaluasi Standar & Atribusi Ilmiah
+### C. Format Evaluasi Standar & Atribusi Ilmiah
 AdaptiveLab menghitung metrik kuantitatif resmi yang selaras dengan standar kompetisi DIBCO:
 - **F-Measure (F1-Score):** Rata-rata harmonik Precision dan Recall deteksi goresan teks.
 - **PSNR (Peak Signal-to-Noise Ratio):** Tingkat kemiripan visual terhadap Ground Truth biner.
