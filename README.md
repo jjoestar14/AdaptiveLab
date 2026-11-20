@@ -90,12 +90,6 @@ AdaptiveLab/
     └── test_api.py             # Pengujian endpoint REST API Flask
 ```
 
-> **Catatan Berkas yang Diabaikan (*Ignored by `.gitignore`*):**
-> - `report_assets/` (direktori aset visual laporan bab 4)
-> - `scripts/generate_report_assets.py` (skrip pembuat aset laporan bab 4)
-> - `outputs/` (direktori penyimpanan sementara server untuk unggahan dan ekspor)
-> - `.venv/`, `__pycache__/`, `.pytest_cache/` (lingkungan virtual dan cache Python)
-
 ---
 
 ## 3. Cara Instalasi dan Menjalankan di Windows
