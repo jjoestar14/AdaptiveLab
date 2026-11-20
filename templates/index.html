@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdaptiveLab - Studio Segmentasi Biner Adaptive Gaussian</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <!-- Chart.js via cdnjs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" role="region" aria-live="polite"></div>
+
+  <!-- Header Aplikasi -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">AL</div>
+        <div class="brand-text">
+          <h1>AdaptiveLab <span class="badge-tag">Gaussian CV</span></h1>
+          <p>Eksplorasi & Evaluasi Segmentasi Citra Berbasis Adaptive Gaussian Thresholding</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div id="loading-status" class="loading-indicator">
+          <span class="spinner" style="width:18px; height:18px;"></span>
+          <span>Memproses...</span>
+        </div>
+        <button id="theme-toggle-btn" class="theme-btn" aria-label="Ganti Tema Tampilan">
+          🌓 Tema
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigasi Tab -->
+  <nav class="nav-tabs" aria-label="Navigasi Fitur Utama">
+    <div class="nav-container">
+      <button class="tab-btn active" data-tab="tab-process">
+        Proses & Parameter
+      </button>
+      <button class="tab-btn" data-tab="tab-compare">
+        Bandingkan Metode
+      </button>
+      <button class="tab-btn" data-tab="tab-experiment">
+        Eksperimen Grid
+      </button>
+      <button class="tab-btn" data-tab="tab-eval">
+        Evaluasi Ground Truth
+      </button>
+      <button class="tab-btn" data-tab="tab-about">
+        Tentang Metode
+      </button>
+    </div>
+  </nav>
+
+  <!-- Kontainer Utama -->
+  <main class="app-container">
+
+    <!-- ======================================================= -->
+    <!-- TAB 1: PROSES & PARAMETER (2 Kolom Layout) -->
+    <!-- ======================================================= -->
+    <div id="tab-process" class="tab-content active">
+      <div class="process-grid">
+
+        <!-- Kolom Kiri: Panel Kontrol Parameter & Input -->
+        <aside class="control-panel">
+          
+          <!-- Pilihan Citra -->
+          <section class="card" aria-labelledby="label-input-image">
+            <h2 id="label-input-image" class="card-title">
+              <span>Citra Masukan</span>
+              <span id="gt-status-badge" class="badge-tag">Pemeriksaan...</span>
+            </h2>
+
+            <!-- Grid Sampel Bawaan -->
+            <div class="form-label">Sampel Sintetis Pengujian:</div>
+            <div id="samples-container" class="sample-grid">
+              <!-- Diisi otomatis oleh JavaScript -->
+            </div>
+
+            <!-- Area Unggah Citra Pengguna -->
+            <div id="main-dropzone" class="dropzone" tabindex="0" role="button" aria-label="Unggah Citra Dokumen">
+              <div class="dropzone-icon">📁</div>
+              <p><b>Klik atau seret citra ke sini</b></p>
+              <small>PNG, JPG, BMP, WEBP (Maksimal 12 MB)</small>
+            </div>
+            <input type="file" id="main-file-input" accept="image/png,image/jpeg,image/bmp,image/webp" style="display:none;">
+          </section>
+
+          <!-- Parameter Inti Adaptive Gaussian -->
+          <section class="card" aria-labelledby="label-core-params">
+            <h2 id="label-core-params" class="card-title">Parameter Inti</h2>
+            <div class="card-subtitle">Pengaturan jendela spasial dan konstanta pergeseran</div>
+
+            <!-- Block Size -->
+            <div class="form-group">
+              <div class="form-label">
+                <label for="param-block-size">Ukuran Blok / Jendela (N &times; N)</label>
+                <span id="badge-block-size" class="badge-value">21</span>
+              </div>
+              <div class="slider-container">
+                <input type="range" id="param-block-size" min="3" max="101" step="2" value="21" aria-label="Slider Block Size">
+                <input type="number" id="input-block-size" min="3" max="101" step="2" value="21" aria-label="Input Angka Block Size">
+              </div>
+              <small style="color:var(--text-muted); font-size:0.75rem;">Harus bilangan ganjil &ge; 3. Menentukan radius tetangga lokal.</small>
+            </div>
+
+            <!-- Constant C -->
+            <div class="form-group">
+              <div class="form-label">
+                <label for="param-c">Konstanta C</label>
+                <span id="badge-c" class="badge-value">5</span>
+              </div>
+              <div class="slider-container">
+                <input type="range" id="param-c" min="-20" max="40" step="1" value="5" aria-label="Slider Konstanta C">
+                <input type="number" id="input-c" min="-20" max="40" step="1" value="5" aria-label="Input Angka Konstanta C">
+              </div>
+              <small style="color:var(--text-muted); font-size:0.75rem;">Nilai pengurang ambang lokal: T(x,y) = &mu;<sub>G</sub>(x,y) &minus; C.</small>
+            </div>
+
+            <!-- Engine Selection -->
+            <div class="form-group">
+              <label for="param-engine" class="form-label">Mesin Eksekusi Algoritma</label>
+              <select id="param-engine">
+                <option value="opencv" selected>OpenCV (cv2.adaptiveThreshold)</option>
+                <option value="manual">Manual Scratch (Konvolusi Kernel Gaussian Kustom)</option>
+              </select>
+            </div>
+
+            <!-- Foreground Convention -->
+            <div class="form-group">
+              <label for="param-fg-color" class="form-label">Konvensi Teks (Foreground)</label>
+              <select id="param-fg-color">
+                <option value="black" selected>Teks Hitam di Latar Putih (Nilai 0)</option>
+                <option value="white">Teks Putih di Latar Gelap (Nilai 255)</option>
+              </select>
+            </div>
+          </section>
+
+          <!-- Akordeon Pra-pemrosesan -->
+          <div class="accordion">
+            <div class="accordion-header" role="button" tabindex="0">
+              <span>Pra-Pemrosesan (Opsional)</span>
+              <span class="accordion-arrow">▼</span>
+            </div>
+            <div class="accordion-body">
+              <!-- Gaussian Blur -->
+              <div class="form-group">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="toggle-gaussian-blur">
+                  <span>Aktifkan Gaussian Blur</span>
+                </label>
+                <div style="margin-top:0.5rem; display:flex; gap:0.5rem; align-items:center;">
+                  <span style="font-size:0.75rem;">Kernel:</span>
+                  <select id="param-gb-ksize" style="width:70px;">
+                    <option value="3">3x3</option>
+                    <option value="5">5x5</option>
+                    <option value="7">7x7</option>
+                  </select>
+                  <span style="font-size:0.75rem;">Sigma:</span>
+                  <input type="number" id="param-gb-sigma" value="0.0" step="0.5" min="0" style="width:65px;">
+                </div>
+              </div>
+
+              <!-- Median Blur -->
+              <div class="form-group">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="toggle-median-blur">
+                  <span>Aktifkan Median Blur (Noise Bintik)</span>
+                </label>
+                <div style="margin-top:0.5rem; display:flex; gap:0.5rem; align-items:center;">
+                  <span style="font-size:0.75rem;">Ukuran Kernel:</span>
+                  <select id="param-mb-ksize" style="width:70px;">
+                    <option value="3">3</option>
+                    <option value="5">5</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- CLAHE -->
+              <div class="form-group">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="toggle-clahe">
+                  <span>Aktifkan CLAHE (Perataan Kontras)</span>
+                </label>
+                <div style="margin-top:0.5rem; display:flex; gap:0.5rem; align-items:center;">
+                  <span style="font-size:0.75rem;">Clip Limit:</span>
+                  <input type="number" id="param-clahe-clip" value="2.0" step="0.5" min="0.5" max="10" style="width:65px;">
+                  <span style="font-size:0.75rem;">Grid Tile:</span>
+                  <input type="number" id="param-clahe-tile" value="8" step="2" min="2" max="16" style="width:60px;">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Akordeon Pasca-pemrosesan -->
+          <div class="accordion">
+            <div class="accordion-header" role="button" tabindex="0">
+              <span>Pasca-Pemrosesan (Morfologi & Filter)</span>
+              <span class="accordion-arrow">▼</span>
+            </div>
+            <div class="accordion-body">
+              <!-- Operasi Morfologi -->
+              <div class="form-group">
+                <label for="param-morph-op" class="form-label">Operasi Morfologi</label>
+                <select id="param-morph-op">
+                  <option value="none" selected>Tidak Ada</option>
+                  <option value="opening">Opening (Hapus noise bintik putih)</option>
+                  <option value="closing">Closing (Tutup lubang & sambung garis)</option>
+                  <option value="erosion">Erosi (Kikis tepi objek)</option>
+                  <option value="dilation">Dilasi (Pertebal goresan)</option>
+                </select>
+                <div style="margin-top:0.5rem; display:flex; gap:0.5rem; align-items:center;">
+                  <span style="font-size:0.75rem;">Kernel:</span>
+                  <select id="param-morph-ksize" style="width:65px;">
+                    <option value="3">3x3</option>
+                    <option value="5">5x5</option>
+                  </select>
+                  <span style="font-size:0.75rem;">Iterasi:</span>
+                  <input type="number" id="param-morph-iter" value="1" min="1" max="5" style="width:55px;">
+                  <span style="font-size:0.75rem;">Bentuk:</span>
+                  <select id="param-morph-shape" style="width:75px;">
+                    <option value="rect">Kotak</option>
+                    <option value="ellipse">Elips</option>
+                    <option value="cross">Palang</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Hapus Komponen Kecil -->
+              <div class="form-group">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="toggle-remove-small">
+                  <span>Hapus Komponen Kecil (Noise Area)</span>
+                </label>
+                <div style="margin-top:0.5rem; display:flex; gap:0.5rem; align-items:center;">
+                  <span style="font-size:0.75rem;">Min Area:</span>
+                  <input type="number" id="param-min-area" value="15" min="2" max="500" style="width:70px;">
+                  <span style="font-size:0.75rem;">Target:</span>
+                  <select id="param-remove-target" style="width:85px;">
+                    <option value="both" selected>Keduanya</option>
+                    <option value="black">Bintik Hitam</option>
+                    <option value="white">Bintik Putih</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </aside>
+
+        <!-- Kolom Kanan: Penampil Hasil & Statistik -->
+        <section class="results-panel">
+
+          <!-- Pipeline Step Visualizer -->
+          <div class="pipeline-bar" aria-label="Alur Pipeline Pengolahan">
+            <span class="pipeline-step active">
+              <span class="pipeline-dot"></span> Citra Asli
+            </span>
+            <span class="pipeline-sep">&rarr;</span>
+            <span class="pipeline-step active">
+              <span class="pipeline-dot"></span> Grayscale
+            </span>
+            <span class="pipeline-sep">&rarr;</span>
+            <span id="pipe-gb" class="pipeline-step">
+              <span class="pipeline-dot"></span> Gauss Blur
+            </span>
+            <span class="pipeline-sep">&rarr;</span>
+            <span id="pipe-mb" class="pipeline-step">
+              <span class="pipeline-dot"></span> Median
+            </span>
+            <span class="pipeline-sep">&rarr;</span>
+            <span id="pipe-clahe" class="pipeline-step">
+              <span class="pipeline-dot"></span> CLAHE
+            </span>
+            <span class="pipeline-sep">&rarr;</span>
+            <span class="pipeline-step active">
+              <span class="pipeline-dot"></span> Adaptive Gauss
+            </span>
+            <span class="pipeline-sep">&rarr;</span>
+            <span id="pipe-morph" class="pipeline-step">
+              <span class="pipeline-dot"></span> Morfologi
+            </span>
+            <span class="pipeline-sep">&rarr;</span>
+            <span id="pipe-clean" class="pipeline-step">
+              <span class="pipeline-dot"></span> Bersih Area
+            </span>
+          </div>
+
+          <!-- View Switcher Buttons -->
+          <div class="view-controls" role="group" aria-label="Mode Tampilan Citra">
+            <button class="view-btn active" data-view="slider">↔ Perbandingan Geser (Slider)</button>
+            <button class="view-btn" data-view="binary_final">Hasil Biner Akhir</button>
+            <button class="view-btn" data-view="threshold_map">Peta Ambang Lokal T(x,y)</button>
+            <button class="view-btn" data-view="grayscale">Grayscale</button>
+            <button class="view-btn" data-view="preprocessed">Pra-proses</button>
+            <button class="view-btn" data-view="original">Citra Asli</button>
+          </div>
+
+          <!-- Main Viewer Window -->
+          <div class="viewer-panel">
+            <!-- Split Slider Mode -->
+            <div id="split-slider" class="split-slider-container">
+              <img class="split-image-before" src="" alt="Citra Sebelum Binerisasi">
+              <img class="split-image-after" src="" alt="Citra Hasil Binerisasi">
+              <div class="split-divider">
+                <div class="split-handle">&harr;</div>
+              </div>
+              <span class="split-label label-left">Asli / Masukan</span>
+              <span class="split-label label-right">Binerisasi Adaptive</span>
+            </div>
+
+            <!-- Single Image View Mode -->
+            <img id="single-view-img" src="" alt="Tampilan Tunggal" style="display:none; max-width:100%; max-height:440px; object-fit:contain;">
+          </div>
+
+          <!-- Actions Bar -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.5rem;">
+            <div style="display:flex; gap:0.5rem;">
+              <button id="btn-download-binary" class="btn btn-primary btn-sm">
+                ⬇ Unduh Hasil Biner (PNG)
+              </button>
+              <button id="btn-download-report" class="btn btn-secondary btn-sm">
+                📄 Unduh Laporan Singkat (CSV)
+              </button>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-muted);">
+              Tips: Geser pembagi garis putih untuk melihat detail piksel sebelum & sesudah segmentasi.
+            </div>
+          </div>
+
+          <!-- Grid Statistik Kuantitatif -->
+          <div class="stats-grid">
+            <div class="stat-box">
+              <div class="stat-label">Resolusi</div>
+              <div id="stat-resolution" class="stat-value">-</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Piksel Hitam (Teks)</div>
+              <div id="stat-black-pct" class="stat-value" style="color:var(--text-primary);">-</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Piksel Putih (Latar)</div>
+              <div id="stat-white-pct" class="stat-value" style="color:var(--accent-teal);">-</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Komponen Teks</div>
+              <div id="stat-components" class="stat-value">-</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">Waktu Proses</div>
+              <div id="stat-time" class="stat-value" style="color:var(--accent-amber);">-</div>
+            </div>
+          </div>
+
+          <!-- Histogram Intensitas Card -->
+          <div class="card">
+            <div class="card-title">
+              <span>Histogram Intensitas Grayscale (256 Tingkat Keabuan)</span>
+              <span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">
+                Mean: <b id="hist-mean">-</b> | Std: <b id="hist-std">-</b> | Min/Max: <b id="hist-minmax">-</b>
+              </span>
+            </div>
+            <div class="chart-container">
+              <canvas id="histogram-canvas"></canvas>
+            </div>
+          </div>
+
+        </section>
+      </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- TAB 2: BANDINGKAN METODE (Global vs Otsu vs Mean vs Gaussian) -->
+    <!-- ======================================================= -->
+    <div id="tab-compare" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span>Perbandingan 4 Metode Segmentasi Biner Citra</span>
+          <button id="btn-run-cmp" class="btn btn-primary btn-sm">Segarkan Perbandingan</button>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
+          Membandingkan metode ambang global manual, ambang optimal bimodal otomatis (Otsu), rata-rata aritmatika lokal (Adaptive Mean), dan rata-rata berbobot Gaussian lokal (Adaptive Gaussian).
+        </p>
+
+        <div style="display:flex; gap:1.5rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap; background:var(--bg-subtle); padding:0.75rem; border-radius:var(--radius-sm);">
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <label for="cmp-global-thresh" style="font-size:0.85rem; font-weight:600;">Ambang Global T:</label>
+            <input type="range" id="cmp-global-thresh" min="0" max="255" value="127" style="width:120px;">
+            <span id="badge-cmp-global-thresh" class="badge-value">127</span>
+            <input type="number" id="input-cmp-global-thresh" min="0" max="255" value="127" style="width:60px;">
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">
+            Parameter adaptif menggunakan nilai aktif: Block Size = <b id="cmp-active-bs">Aktif</b>, C = <b id="cmp-active-c">Aktif</b>.
+          </div>
+        </div>
+
+        <div id="comparison-results" class="comparison-grid">
+          <!-- Diisi otomatis oleh JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- TAB 3: EKSPERIMEN GRID (Parameter Exploration) -->
+    <!-- ======================================================= -->
+    <div id="tab-experiment" class="tab-content">
+      <div class="card">
+        <h2 class="card-title">Eksperimen Kombinasi Parameter (Block Size &times; C)</h2>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
+          Menjalankan pengujian sistematis pada seluruh kombinasi ukuran jendela dan konstanta pergeseran. Hasil disajikan dalam tabel kuantitatif, galeri thumbnail, dan dapat diunduh untuk lampiran Bab 4 laporan penelitian.
+        </p>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:1rem; margin-bottom:1rem; background:var(--bg-subtle); padding:1rem; border-radius:var(--radius-sm);">
+          <div>
+            <label for="exp-blocks" class="form-label">Daftar Block Size (pisahkan koma):</label>
+            <input type="text" id="exp-blocks" value="11, 15, 21, 31, 51" style="width:100%;">
+            <small style="color:var(--text-muted); font-size:0.7rem;">Hanya angka ganjil &ge; 3 yang diproses.</small>
+          </div>
+          <div>
+            <label for="exp-c" class="form-label">Daftar Konstanta C (pisahkan koma):</label>
+            <input type="text" id="exp-c" value="2, 5, 10, 15" style="width:100%;">
+            <small style="color:var(--text-muted); font-size:0.7rem;">Dapat bernilai negatif atau positif.</small>
+          </div>
+          <div style="display:flex; flex-direction:column; justify-content:center;">
+            <label class="toggle-switch">
+              <input type="checkbox" id="exp-apply-pipeline" checked>
+              <span>Sertakan Pra/Pasca-proses Aktif</span>
+            </label>
+            <button id="btn-run-experiment" class="btn btn-primary" style="margin-top:0.5rem;">
+              Mulai Eksperimen Grid
+            </button>
+          </div>
+        </div>
+
+        <!-- Tombol Ekspor -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+          <h3 style="font-size:0.95rem; font-weight:700;">Tabel Rekapitulasi Hasil</h3>
+          <div style="display:flex; gap:0.5rem;">
+            <button id="btn-exp-csv" class="btn btn-secondary btn-sm">
+              ⬇ Unduh Tabel (CSV)
+            </button>
+            <button id="btn-exp-zip" class="btn btn-secondary btn-sm">
+              📦 Unduh Semua Gambar (ZIP)
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabel Hasil -->
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead id="exp-table-head">
+              <tr>
+                <th>No</th>
+                <th>Block Size (N)</th>
+                <th>Konstanta (C)</th>
+                <th>% Hitam</th>
+                <th>% Putih</th>
+                <th>Waktu (ms)</th>
+              </tr>
+            </thead>
+            <tbody id="exp-table-body">
+              <tr>
+                <td colspan="6" style="text-align:center; color:var(--text-muted); padding:2rem;">
+                  Belum ada eksperimen yang dijalankan. Klik "Mulai Eksperimen Grid" di atas.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Galeri Thumbnail Kombinasi -->
+        <h3 style="font-size:0.95rem; font-weight:700; margin-top:1.5rem;">Galeri Thumbnail Hasil Kombinasi</h3>
+        <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.5rem;">
+          Klik thumbnail untuk melihat perbesaran citra resolusi penuh.
+        </p>
+        <div id="exp-thumb-grid" class="exp-thumb-grid">
+          <!-- Diisi otomatis oleh JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- TAB 4: EVALUASI GROUND TRUTH -->
+    <!-- ======================================================= -->
+    <div id="tab-eval" class="tab-content">
+      <div class="card">
+        <h2 class="card-title">Evaluasi Kuantitatif Terhadap Ground Truth Biner</h2>
+        <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
+          Membandingkan segmentasi biner terhadap acuan kebenaran (Ground Truth) piksel per piksel menggunakan Confusion Matrix, Precision, Recall, F1-Score, Accuracy, dan Peak Signal-to-Noise Ratio (PSNR).
+        </p>
+
+        <!-- Area Unggah GT -->
+        <div style="margin-bottom:1.5rem; background:var(--bg-subtle); padding:1rem; border-radius:var(--radius-sm);">
+          <div style="font-size:0.85rem; font-weight:600; margin-bottom:0.4rem;">
+            Unggah Berkas Ground Truth Kustom (Opsional):
+          </div>
+          <div id="gt-dropzone" class="dropzone" tabindex="0" role="button" aria-label="Unggah Ground Truth">
+            <div class="dropzone-icon">📁</div>
+            <p><b>Klik atau seret citra Ground Truth biner ke sini</b></p>
+            <small>Format PNG atau JPG hitam putih (Latar Putih 255, Teks Hitam 0)</small>
+          </div>
+          <input type="file" id="gt-file-input" accept="image/png,image/jpeg,image/bmp" style="display:none;">
+        </div>
+
+        <!-- Warning Box jika Resize Terjadi -->
+        <div id="eval-warning-box" class="eval-alert eval-alert-warning" style="display:none;"></div>
+
+        <!-- Metrik Card -->
+        <div id="eval-metrics-container">
+          <!-- Diisi otomatis oleh JavaScript -->
+        </div>
+
+        <!-- Peta Visualisasi Selisih (Confusion Map) -->
+        <div style="margin-top:1.5rem;">
+          <h3 style="font-size:0.95rem; font-weight:700;">Peta Selisih Klasifikasi Piksel (Confusion Map)</h3>
+          
+          <div class="eval-legend">
+            <div class="legend-item">
+              <span class="legend-color" style="background-color:#2ecc71;"></span>
+              <span><b>True Positive (TP)</b>: Teks Terdeteksi Benar</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background-color:#e74c3c;"></span>
+              <span><b>False Positive (FP)</b>: Noise Dianggap Teks</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background-color:#3498db;"></span>
+              <span><b>False Negative (FN)</b>: Bagian Teks Terlewat / Hilang</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color" style="background-color:#f5f7fa;"></span>
+              <span><b>True Negative (TN)</b>: Latar Bersih</span>
+            </div>
+          </div>
+
+          <div style="background:#111; padding:1rem; border-radius:var(--radius-md); text-align:center;">
+            <img id="eval-diff-img" src="" alt="Peta Confusion Map" style="max-width:100%; max-height:450px; object-fit:contain;">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- TAB 5: TENTANG METODE (Bahan Laporan & Teori) -->
+    <!-- ======================================================= -->
+    <div id="tab-about" class="tab-content">
+      <article class="card" style="line-height:1.7;">
+        <h2 style="font-size:1.3rem; font-weight:800; margin-bottom:1rem; color:var(--accent-teal);">
+          Prinsip Matematis & Teori Adaptive Gaussian Thresholding
+        </h2>
+
+        <section style="margin-bottom:1.5rem;">
+          <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.5rem;">1. Rumus Ambang Batas Spasial Lokal T(x, y)</h3>
+          <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.75rem;">
+            Tidak seperti metode global seperti Otsu yang menentukan satu nilai ambang tunggal untuk seluruh citra, Adaptive Gaussian Thresholding menghitung nilai ambang dinamis untuk setiap piksel (x, y) berdasarkan bobot sebaran normal Gaussian pada lingkungan tetangga berukuran <i>N &times; N</i>:
+          </p>
+          <div style="background:var(--bg-subtle); padding:1rem; border-radius:var(--radius-sm); font-family:var(--font-mono); font-size:0.95rem; border-left:4px solid var(--accent-teal); margin-bottom:0.75rem;">
+            T(x, y) = &mu;<sub>G</sub>(x, y) &minus; C<br><br>
+            Biner(x, y) = 255 jika I(x, y) &gt; T(x, y), selain itu 0
+          </div>
+          <p style="font-size:0.9rem; color:var(--text-secondary);">
+            di mana <b>&mu;<sub>G</sub>(x, y)</b> adalah konvolusi citra keabuan dengan kernel Gaussian 2D, dan <b>C</b> adalah konstanta offset pengurang ambang.
+          </p>
+        </section>
+
+        <section style="margin-bottom:1.5rem;">
+          <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.5rem;">2. Pembangunan Kernel Gaussian 2D</h3>
+          <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+            Kernel Gaussian memberikan bobot spasial tertinggi pada piksel pusat (jarak r = 0) dan meluruh secara eksponensial ke arah tepi jendela:
+          </p>
+          <div style="background:var(--bg-subtle); padding:1rem; border-radius:var(--radius-sm); font-family:var(--font-mono); font-size:0.9rem; margin-bottom:0.75rem;">
+            G(x) = exp( &minus;0.5 &times; (x / &sigma;)<sup>2</sup> )<br>
+            &sigma; = 0.3 &times; ((N &minus; 1) &times; 0.5 &minus; 1) + 0.8<br>
+            K<sub>2D</sub> = (G &otimes; G<sup>T</sup>) / &sum; K<sub>2D</sub>
+          </div>
+          <p style="font-size:0.85rem; color:var(--text-muted);">
+            Sifat Gaussian menghasilkan transisi ambang batas lokal yang jauh lebih halus dan bebas efek artefak batas kotak (blocking artifacts) dibandingkan Adaptive Mean.
+          </p>
+        </section>
+
+        <section style="margin-bottom:1.5rem;">
+          <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.5rem;">3. Arti Fisis Parameter</h3>
+          <ul style="font-size:0.9rem; color:var(--text-secondary); padding-left:1.25rem;">
+            <li style="margin-bottom:0.4rem;">
+              <b>Block Size (N):</b> Rentang radius pengaruh pencahayaan lokal. Nilai N harus lebih besar dari ketebalan goresan teks dan ukuran spasi karakter agar piksel latar sekitar teks masuk ke dalam perhitungan rata-rata.
+            </li>
+            <li style="margin-bottom:0.4rem;">
+              <b>Konstanta C:</b> Mengontrol sensitivitas deteksi. Nilai C positif menekan sensitivitas agar tekstur kertas atau noise mikro tidak terdeteksi sebagai teks. Jika C terlalu besar, goresan teks tipis akan hilang (False Negative). Jika C terlalu kecil atau negatif, noise bintik akan bermunculan di area kosong (False Positive).
+            </li>
+          </ul>
+        </section>
+
+        <section style="margin-bottom:1.5rem;">
+          <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.5rem;">4. Kapan Metode Ini Sangat Cocok & Batasannya</h3>
+          <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+            <b>Kelebihan Utama:</b>
+          </p>
+          <ul style="font-size:0.85rem; color:var(--text-secondary); padding-left:1.25rem; margin-bottom:0.75rem;">
+            <li>Sangat tangguh terhadap dokumen dengan gradien bayangan kuat, pencahayaan ponsel miring, dan noda kelembapan kertas tua.</li>
+            <li>Mempertahankan keterbacaan teks di area yang gelap maupun terang secara serentak.</li>
+          </ul>
+          <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+            <b>Keterbatasan & Solusi:</b>
+          </p>
+          <ul style="font-size:0.85rem; color:var(--text-secondary); padding-left:1.25rem;">
+            <li>Pada area seragam murni (blank area), perbedaan intensitas acak kecil dapat terpicu jika C mendekati 0. Solusi: Gunakan nilai C yang cukup (&ge; 4-8) dan aktifkan pasca-proses penghapusan komponen kecil.</li>
+            <li>Sensitif terhadap noise impulsif salt-and-pepper. Solusi: Aktifkan pra-proses Median Filter sebelum thresholding.</li>
+          </ul>
+        </section>
+      </article>
+    </div>
+
+  </main>
+
+  <!-- Modal Preview Citra Resolusi Penuh -->
+  <div id="image-modal" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <button id="modal-close-btn" class="modal-close" aria-label="Tutup Modal">&times;</button>
+      <h3 id="modal-title" style="margin-bottom:1rem; font-size:1rem; font-weight:700;">Pratinjau Citra</h3>
+      <div style="text-align:center; background:#000; padding:1rem; border-radius:var(--radius-sm);">
+        <img id="modal-img" src="" alt="Perbesaran Pratinjau Citra" style="max-width:100%; max-height:70vh; object-fit:contain;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/viewer.js"></script>
+  <script src="/static/js/charts.js"></script>
+  <script src="/static/js/main.js"></script>
+</body>
+</html>

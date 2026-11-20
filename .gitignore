@@ -1,0 +1,63 @@
+# ==========================================
+# AdaptiveLab - .gitignore
+# ==========================================
+
+# 1. Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# 2. Python Cache & Compiled Files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+.Python
+
+# 3. Pengujian & Cakupan Kode (Testing & Cache)
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# 4. Berkas Skrip & Hasil Generasi (Laporan & Sampel Sintetis)
+report_assets/
+scripts/generate_report_assets.py
+scripts/make_samples.py
+
+# Citra Sampel Sintetis Hasil Generate (sample*.png diabaikan)
+sample_images/sample*
+sample_images/*.png
+
+# 5. Output Sementara Server & Unggahan Pengguna
+outputs/
+*.csv
+*.zip
+
+# 6. IDE, Editor & Workspace Tools
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.agents/
+
+# 7. Berkas Sistem Operasi (OS Generated)
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# 8. Log & File Sementara
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
