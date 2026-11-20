@@ -53,7 +53,6 @@ Struktur repositori yang terlacak pada Git (sesuai aturan `.gitignore`):
 
 ```text
 AdaptiveLab/
-├── .gitignore                  # Konfigurasi pengabaian berkas & folder Git
 ├── app.py                      # Server Flask, routing API JSON, & auto-discovery dataset
 ├── requirements.txt            # Dependensi pustaka Python
 ├── README.md                   # Dokumentasi teknis & panduan riset
