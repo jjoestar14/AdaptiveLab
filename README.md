@@ -102,29 +102,23 @@ AdaptiveLab/
 
 Pastikan Python 3.10 atau versi yang lebih baru telah terpasang di sistem Windows Anda.
 
-### Langkah 1: Buka Terminal (PowerShell atau Command Prompt)
-Navigasikan ke direktori proyek:
-```powershell
-cd "d:\Antigravity Project\AdaptiveLab"
-```
-
-### Langkah 2: Buat & Aktifkan Lingkungan Virtual (Virtual Environment)
+### Langkah 1: Buat & Aktifkan Lingkungan Virtual (Virtual Environment)
 ```powershell
 py -m venv .venv
 .venv\Scripts\activate
 ```
 
-### Langkah 3: Pasang Dependensi
+### Langkah 2: Pasang Dependensi
 ```powershell
 pip install -r requirements.txt
 ```
 
-### Langkah 4: Jalankan Server Aplikasi
+### Langkah 3: Jalankan Server Aplikasi
 ```powershell
 py app.py
 ```
 
-### Langkah 5: Buka Aplikasi di Peramban Web
+### Langkah 4: Buka Aplikasi di Peramban Web
 Buka URL berikut pada peramban (Chrome, Edge, Firefox):
 ```text
 http://127.0.0.1:5050
@@ -148,30 +142,7 @@ Hasil pengujian mencakup:
 
 ---
 
-## 5. Cara Membuat Sampel Sintetis & Aset Laporan
-
-### Membuat Citra Sampel Pengujian Baru:
-```powershell
-python scripts/make_samples.py
-```
-Perintah ini akan membuat 3 pasang citra dokumen teks sintetis dan berkas acuan *Ground Truth* di folder `sample_images/`:
-1. `sample1_uneven_light`: Gradien pencahayaan diagonal kuat dan bayangan lipatan buku.
-2. `sample2_salt_pepper`: Gangguan *noise* impulsif *salt-and-pepper* (3.5%).
-3. `sample3_low_contrast`: Dokumen pudar dengan selisih kontras teks dan latar hanya 25 level keabuan.
-
-### Membangkitkan Aset untuk Bab 4 Laporan:
-```powershell
-python scripts/generate_report_assets.py
-```
-Perintah ini mengeksekusi pipeline lengkap dan menyimpan seluruh materi siap pakai ke direktori `report_assets/`:
-- Gambar tahapan pipeline (Asli $\rightarrow$ Grayscale $\rightarrow$ Blur $\rightarrow$ Peta Ambang $\rightarrow$ Biner $\rightarrow$ Bersih $\rightarrow$ Confusion Map).
-- Kolase perbandingan 4 metode (`compare_montage_2x2.png`).
-- Tabel CSV rekapitulasi kombinasi parameter (`tabel_eksperimen_blocksize_vs_c.csv`).
-- Grafik kurva distribusi histogram dan pengaruh Block Size vs F1-score (`histogram_intensitas.png`, `grafik_f1_vs_blocksize.png`).
-
----
-
-## 6. Penggunaan Dataset H-DIBCO 2016 (Handwritten Document Image Binarization Contest)
+## 5. Penggunaan Dataset H-DIBCO 2016 (Handwritten Document Image Binarization Contest)
 
 Aplikasi ini dioptimalkan dan diuji menggunakan dataset standar kompetisi internasional **H-DIBCO 2016** (*Handwritten Document Image Binarization Contest*):
 - **Situs Resmi:** [https://vc.ee.duth.gr/h-dibco2016/](https://vc.ee.duth.gr/h-dibco2016/)
@@ -214,55 +185,5 @@ AdaptiveLab menghitung metrik kuantitatif resmi yang selaras dengan standar komp
 
 ---
 
-## 7. Catatan Implementasi & Analisis Keputusan Desain (Untuk Bahan Laporan)
-
-Bagian ini dirancang khusus untuk mempermudah penulisan **Bab 3 (Metodologi)** dan **Bab 4 (Hasil dan Pembahasan)** pada laporan tugas akhir / praktikum *Computer Vision*:
-
-### A. Alur Pipeline Pengolahan Citra
-```text
-[Citra Asli (BGR/RGB)]
-         │
-         ▼
-[Grayscale uint8 (0-255)]
-         │
-         ▼
-[Pra-Pemrosesan Opsional] ──► Median Filter (noise bintik) / Gaussian Blur / CLAHE
-         │
-         ▼
-[Peta Ambang Lokal T(x,y)] = μ_G(x,y) - C
-         │
-         ▼
-[Adaptive Gaussian Binarization] ──► 255 jika I(x,y) > T(x,y), else 0
-         │
-         ▼
-[Pasca-Pemrosesan Opsional] ──► Morfologi Opening/Closing & Filter Komponen Luas
-         │
-         ▼
-[Citra Biner Bersih Akhir]
-```
-
-### B. Formulasi Matematis Inti
-1. **Peta Ambang Lokal:**
-   $$T(x, y) = \mu_G(x, y) - C$$
-   dengan $\mu_G(x, y) = I(x, y) * K_{\text{Gauss}}$ adalah konvolusi citra dengan kernel bobot sebaran normal dua dimensi.
-2. **Kernel Gaussian Spasial:**
-   $$G(u) = \exp\left(-\frac{u^2}{2\sigma^2}\right), \quad \sigma = 0.3 \times \left(\frac{N - 1}{2} - 1\right) + 0.8$$
-   $$K(u, v) = \frac{G(u) \cdot G(v)}{\sum_{i,j} G(i) \cdot G(j)}$$
-3. **Keputusan Biner:**
-   $$\text{Biner}(x, y) = \begin{cases} 255, & \text{jika } I(x, y) > T(x, y) \\ 0, & \text{lainnya} \end{cases}$$
-
-### C. Alasan Pemilihan Parameter Default
-- **Block Size $N = 21$:** Ukuran jendela harus lebih besar dari lebar goresan huruf teks (stroke width) tertebal, namun cukup kecil untuk mengikuti gradien bayangan lokal. Pada dokumen teks beresolusi 500-1000 piksel, goresan huruf memiliki tebal 2-6 piksel. Jendela $21 \times 21$ melingkupi teks sekaligus sampel kertas latar sekitar secara seimbang.
-- **Konstanta $C = 5$:** Mengurangi nilai ambang sebesar 5 tingkat keabuan di bawah rata-rata lokal. Nilai ini memberikan toleransi yang cukup terhadap tekstur serat kertas dan fluktuasi intensitas sensor kamera tanpa memotong goresan tinta tipis.
-- **Handling Border:** Menggunakan `BORDER_REPLICATE | BORDER_ISOLATED` untuk mencegah tepi dokumen menjadi gelap atau terpotong (*vignetting*).
-
-### D. Perbandingan Terhadap Metode Lain
-- **Global Thresholding (T=127):** Gagal total pada dokumen bergradien pencahayaan. Area yang tertutup bayangan menjadi hitam pekat (huruf hilang dalam bayangan), sedangkan area yang terlalu terang membuat huruf tipis memudar.
-- **Otsu's Thresholding:** Sangat baik pada citra dengan histogram bimodal yang seragam di seluruh permukaan. Namun, bayangan lokal menciptakan distribusi intensitas multimodal yang menyebabkan ambang batas global salah menempatkan wilayah bayangan sebagai foreground.
-- **Adaptive Mean:** Menggunakan bobot kotak seragam ($1 / N^2$). Pada batas tepi yang kontras, timbul efek cincin/artefak kotak (*blocking halo*).
-- **Adaptive Gaussian:** Memberikan bobot tertinggi pada piksel terdekat. Menghasilkan kontur goresan huruf yang halus, konsisten, dan sangat tangguh terhadap bayangan lipatan buku diagonal.
-
----
-
-## 8. Lisensi
+## 6. Lisensi
 Aplikasi ini dikembangkan untuk tujuan edukasi dan riset akademis pada mata kuliah *Computer Vision*. Bebas digunakan dan dimodifikasi untuk keperluan studi dan laporan ilmiah.
